@@ -112,7 +112,7 @@ const run = async () => {
             const signature = await sendAndConfirmTransaction(connection, tx, [mainKp], { skipPreflight: true, commitment: commitment });
 
             console.log(`Transfer Tokens : https://solscan.io/tx/${signature}`)
-            await sleep(3000)
+
         }
 
     } catch (error) {
