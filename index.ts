@@ -1,26 +1,18 @@
 import {
-    PublicKey, Keypair, Connection, ComputeBudgetProgram, sendAndConfirmTransaction, VersionedTransaction, TransactionMessage, TransactionInstruction, SystemProgram,
+    PublicKey, Keypair, Connection, ComputeBudgetProgram, sendAndConfirmTransaction,
     LAMPORTS_PER_SOL, Transaction
 } from "@solana/web3.js";
 import {
-    NATIVE_MINT, TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction,
-    createCloseAccountInstruction, getAssociatedTokenAddress, getMint,
-    createSyncNativeInstruction,
-    createAssociatedTokenAccountInstruction, createTransferInstruction
+    getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction
 } from "@solana/spl-token";
-import { jitoWithAxios } from "./src/jitoWithAxios";
 import base58 from "bs58";
-import { retrieveEnvVariable, saveDataToFile, sleep, readJson } from "./src/utils";
-import { Liquidity, LiquidityPoolKeysV4, MAINNET_PROGRAM_ID, InstructionType, Percent, CurrencyAmount, Token, SOL, LiquidityPoolInfo, TokenAmount } from "@raydium-io/raydium-sdk";
-import { derivePoolKeys } from "./src/poolAll";
-import { BN } from "bn.js";
+import { retrieveEnvVariable, saveDataToFile, sleep } from "./src/utils";
+import { LiquidityPoolKeysV4, LiquidityPoolInfo } from "@raydium-io/raydium-sdk";
 
 // Environment Variables3
 const baseMintStr = retrieveEnvVariable('BASE_MINT');
 const mainKpStr = retrieveEnvVariable('MAIN_KP');
 const rpcUrl = retrieveEnvVariable("RPC_URL");
-const poolId = retrieveEnvVariable('POOL_ID');
-const mode = retrieveEnvVariable('MODE');
 const TOKEN_AMOUNT = Number(retrieveEnvVariable('TOKEN_AMOUNT')) * 10 ** 9
 const WALLET_COUNT = Number(retrieveEnvVariable('WALLET_COUNT'))
 const WALLET_BUNDLE = Number(retrieveEnvVariable('WALLET_BUNDLE'))
@@ -30,14 +22,6 @@ const connection = new Connection(rpcUrl, { commitment: "confirmed" });
 const mainKp = Keypair.fromSecretKey(base58.decode(mainKpStr));
 const baseMint = new PublicKey(baseMintStr);
 const commitment = "confirmed"
-
-
-let poolKeys: LiquidityPoolKeysV4 | null = null;
-let tokenAccountRent: number | null = null;
-let decimal: number | null = null;
-let poolInfo: LiquidityPoolInfo | null = null;
-
-
 
 const createWallets = (): Keypair[][] => {
     let index = 0;
@@ -75,7 +59,6 @@ const run = async () => {
             count++;
             try {
 
-
                 const tx = new Transaction().add(
                     ComputeBudgetProgram.setComputeUnitPrice({
                         microLamports: 100_000,
@@ -91,7 +74,7 @@ const run = async () => {
                     console.log("Buyer keypair :", wallets[j].publicKey.toBase58());
                     const buyerBalance = (await connection.getBalance(wallets[j].publicKey)) / LAMPORTS_PER_SOL;
                     console.log("Buyer keypair balance :", buyerBalance);
-
+                    //  transfer a little sol for gather to everywallet.
                     // tx.add(
                     //     SystemProgram.transfer({
                     //         fromPubkey: mainKp.publicKey,
@@ -100,7 +83,6 @@ const run = async () => {
                     //     })
                     // )
                     const srcAta = await getAssociatedTokenAddress(baseMint, mainKp.publicKey)
-
                     const ata = await getAssociatedTokenAddress(baseMint, wallets[j].publicKey)
                     const info = await connection.getAccountInfo(ata)
                     if (!info)
@@ -124,7 +106,6 @@ const run = async () => {
                     )
                 }
 
-
                 tx.feePayer = mainKp.publicKey
                 tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
 
@@ -145,7 +126,5 @@ const run = async () => {
         console.log("error", error);
     }
 }
-
-
 
 run();
