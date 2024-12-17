@@ -7,13 +7,15 @@ import {
 } from "@solana/spl-token";
 import base58 from "bs58";
 import { retrieveEnvVariable, saveDataToFile, sleep } from "./src/utils";
-import { LiquidityPoolKeysV4, LiquidityPoolInfo } from "@raydium-io/raydium-sdk";
 
 // Environment Variables3
 const baseMintStr = retrieveEnvVariable('BASE_MINT');
 const mainKpStr = retrieveEnvVariable('MAIN_KP');
 const rpcUrl = retrieveEnvVariable("RPC_URL");
-const TOKEN_AMOUNT = Number(retrieveEnvVariable('TOKEN_AMOUNT')) * 10 ** 9
+const TOKEN_DECIMAL = Number(retrieveEnvVariable('TOKEN_DECIMAL'))
+const TOKEN_AMOUNT = Number(retrieveEnvVariable('TOKEN_AMOUNT')) * 10 ** TOKEN_DECIMAL
+const MAX_AMOUNT = Number(retrieveEnvVariable('MAX_AMOUNT')) * 10 ** TOKEN_DECIMAL
+const MIN_AMOUNT = Number(retrieveEnvVariable('MIN_AMOUNT')) * 10 ** TOKEN_DECIMAL
 const WALLET_COUNT = Number(retrieveEnvVariable('WALLET_COUNT'))
 const WALLET_BUNDLE = Number(retrieveEnvVariable('WALLET_BUNDLE'))
 
@@ -29,7 +31,6 @@ const createWallets = (): Keypair[][] => {
     for (let i = 0; i < (WALLET_COUNT / WALLET_BUNDLE); i++) {
         const row: Keypair[] = [];
         for (let j = 0; j < WALLET_BUNDLE; j++) {
-
             index++;
             console.log(index);
             const buyerKp = Keypair.generate()
@@ -42,10 +43,13 @@ const createWallets = (): Keypair[][] => {
     return wallets;
 };
 
+const getRandomTokenAmount = (min: number, max: number): number => {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 const run = async () => {
     console.log("============================ Bot start ===============================");
     try {
-
         console.log("============================ Mainkey ===============================");
         console.log("Mainkey=============>", base58.encode(mainKp.secretKey));
         const mainKpBalance = (await connection.getBalance(mainKp.publicKey)) / LAMPORTS_PER_SOL;
@@ -58,7 +62,6 @@ const run = async () => {
         walletArray.map(async (wallets, index) => {
             count++;
             try {
-
                 const tx = new Transaction().add(
                     ComputeBudgetProgram.setComputeUnitPrice({
                         microLamports: 100_000,
@@ -70,7 +73,6 @@ const run = async () => {
 
                 for (let j = 0; j < wallets.length; j++) {
                     console.log("============================ Buyerkey ===============================");
-
                     console.log("Buyer keypair :", wallets[j].publicKey.toBase58());
                     const buyerBalance = (await connection.getBalance(wallets[j].publicKey)) / LAMPORTS_PER_SOL;
                     console.log("Buyer keypair balance :", buyerBalance);
@@ -96,12 +98,13 @@ const run = async () => {
                         )
                     console.log(info);
 
+                    const randomTokenAmount = getRandomTokenAmount(MIN_AMOUNT, MAX_AMOUNT);
                     tx.add(
                         createTransferInstruction(
                             srcAta,
                             ata,
                             mainKp.publicKey,
-                            TOKEN_AMOUNT
+                            randomTokenAmount
                         )
                     )
                 }
@@ -114,7 +117,6 @@ const run = async () => {
                 const signature = await sendAndConfirmTransaction(connection, tx, [mainKp], { skipPreflight: true, commitment: commitment });
 
                 console.log(`Transfer Tokens ${count}: https://solscan.io/tx/${signature}`)
-
 
             } catch (error) {
                 console.log("error", error);
